@@ -1,0 +1,1 @@
+[System.Environment]::SetEnvironmentVariable('WINSEC', "$env:ProgramFiles\Windows Defender\Scripting Tools and Updater\scripts",[System.EnvironmentVariableTarget]::Machine)
