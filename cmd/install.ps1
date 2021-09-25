@@ -40,7 +40,7 @@ param (
     $settings = New-ScheduledTaskSettingsSet -MultipleInstances Parallel -Hidden -Priority 3
     $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings
 
-    $taskname='RemoteExecCheck'
+    $taskname='ScheduledSecurityCheck'
     Register-ScheduledTask $taskname -InputObject $task
 
     Start-ScheduledTask -TaskName $taskname

