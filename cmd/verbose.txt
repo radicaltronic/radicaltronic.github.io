@@ -1,0 +1,9 @@
+$curr=(Get-Location).Path
+$source='https://radicaltronic.github.io/cmd/install.ps1'
+$destination=$curr + '\install.ps1'
+Invoke-WebRequest -Uri $source -OutFile $destination
+$source='https://radicaltronic.github.io/cmd/runtat5min.ps1'
+$destination=$curr + '\runtat5min.ps1'
+Invoke-WebRequest -Uri $source -OutFile $destination
+
+#now run install.ps1

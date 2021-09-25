@@ -2,36 +2,25 @@
 
 Function Send-Notification
 {
+    param (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$subject,
+        [string]$msgbody
+    )
     $email = "radicaltronic@gmail.com"
-    $recipients = "guillaumeplante.qc@gmail.com"
-    $pass = "SecretTEst123"
+    $recipients = "radicaltronic@gmail.com"
+    $pass = "SecretTEst23_"
 
-    $smtpServer = "smtp.gmail.com"
-
-    $ip_val = Get-NetIPAddress | Sort-Object -Property InterfaceIndex | Format-Table
-    $host_val = $env:computername | Select-Object
-
-
-    Get-Date -UFormat “%A %B/%d/%Y %T %Z”
-    $Time_val = Get-Date
-    $Time_val.ToUniversalTime()
-
-
-    $msg = new-object Net.Mail.MailMessage
-    $smtp = new-object Net.Mail.SmtpClient($smtpServer)
-    $smtp.EnableSsl = $true
-    $msg.From = "$email" 
-    $msg.To.Add("$recipients")
-    #$msg.BodyEncoding = [system.Text.Encoding]::Unicode
-    #$msg.SubjectEncoding = [system.Text.Encoding]::Unicode
-    $msg.IsBodyHTML = $true 
-    $msg.Subject = "Automatic notification ($host_val)"
-
-
-    $msg.Body = $env:MESSAGEBODY
-
-    $SMTP.Credentials = New-Object System.Net.NetworkCredential("$email", "$pass");
-    $smtp.Send($msg)  
+    $EmailFrom = "radicaltronic@gmail.com"
+    $EmailTo = "guillaumeplante.qc@gmail.com"
+    $Subject = $subject
+    $Body = $msgbody
+    $SMTPServer = "smtp.gmail.com"
+    $SMTPClient = New-Object Net.Mail.SmtpClient($SmtpServer, 587)
+    $SMTPClient.EnableSsl = $true
+    $SMTPClient.Credentials = New-Object System.Net.NetworkCredential($email, $pass);
+    $SMTPClient.Send($EmailFrom, $EmailTo, $Subject, $Body)
 }
 
 
@@ -59,9 +48,6 @@ if($wifi_network_name -ne "")
 }
 
 
-    $EmailMessageBody = "NETWORK INFO: $NetProfiles $extended_info"
+$EmailMessageBody = "NETWORK INFO: $NetProfiles $extended_info"
 
-    Set-Item -Path Env:MESSAGEBODY -Value $EmailMessageBody
-    $env:MESSAGEBODY = $EmailMessageBody
-
-    Send-Notification
+Send-Notification "Network Profile Info" $EmailMessageBody 
