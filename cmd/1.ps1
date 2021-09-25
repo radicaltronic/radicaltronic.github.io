@@ -1,0 +1,1 @@
+New-Item -Path "c:\Temp\ddeewt" -ItemType Directory -Force
