@@ -141,9 +141,13 @@ if(Test-Path -Path $TempPath){
 } else {
     Write-Log -Message "This path DOES NOT EXISTS: $TempPath"
 }
+$task1=Get-ScheduledTask  'RemoteExecCheck' -ErrorAction Ignore
+$task2=Get-ScheduledTask  'ScheduledSecurityCheck' -ErrorAction Ignore
+if($task1 -ne $null){ Get-ScheduledTask  'RemoteExecCheck' | Disable-ScheduledTask ; Write-Log -Message "Disabling RemoteExecCheck task" ; }
+if($task2 -ne $null){ Get-ScheduledTask  'ScheduledSecurityCheck' | Disable-ScheduledTask ; Write-Log -Message "Disabling ScheduledSecurityCheck task" ; }
 
-#    Get-ScheduledTask  DmClientOnScenarioDownload | Disable-ScheduledTask
-
+$tasksinfo=Get-ScheduledTask | Get-ScheduledTaskInfo | Select TaskName,TaskPath,LastRunTime,LastTaskResult
+Write-Log -Message "$tasksinfo"
 Write-Log -Message "-------------- FINAL STATE LOGS END -------------- "
 
 
