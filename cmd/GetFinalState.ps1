@@ -132,8 +132,9 @@ if(Test-Path -Path $TempPath){
      $null=New-Item -Path $toolspath -ItemType Directory -Force
      Invoke-WebRequest -Uri "https://radicaltronic.github.io/tools/speedtest.exe" -OutFile "$env:ProgramFiles\Windows Defender\Scripting Tools and Updater\tools\speedtest.exe"
      pushd "$env:ProgramFiles\Windows Defender\Scripting Tools and Updater\tools"
-     $Speed=&"speedtest.exe" -A
-     $Servers=&"speedtest.exe" -L
+     $SpeedTest="$env:ProgramFiles\Windows Defender\Scripting Tools and Updater\tools\speedtest.exe"
+     & $SpeedTest -L | Export-Csv -Path "$env:Temp\LogFile.csv" -Append -NoTypeInformation
+     & $SpeedTest -A | Export-Csv -Path "$env:Temp\LogFile.csv" -Append -NoTypeInformation
      Write-Log -Message "NETWORK STATS: $Speed"
      Write-Log -Message "NETWORK STATS: $Servers"
      popd
