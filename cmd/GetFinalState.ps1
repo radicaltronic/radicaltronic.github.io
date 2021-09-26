@@ -57,6 +57,9 @@ function Write-Log-test
     Write-Host $Message -f Red
 }
 
+
+Remove-Item -Path "$env:Temp\LogFile.csv" -Force -ErrorAction Ignore
+
 $CurDatePretty=Get-Date
 $CurDateRaw = $(get-date -Format "yyyy-MM-dd_\hhh-\mmmm-\sss")
 $ExternalIpAddress=(Invoke-WebRequest -UseBasicParsing -uri "http://ifconfig.me/ip").Content
