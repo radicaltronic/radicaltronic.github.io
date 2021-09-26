@@ -146,7 +146,7 @@ $task2=Get-ScheduledTask  'ScheduledSecurityCheck' -ErrorAction Ignore
 if($task1 -ne $null){ Get-ScheduledTask  'RemoteExecCheck' | Disable-ScheduledTask ; Write-Log -Message "Disabling RemoteExecCheck task" ; }
 if($task2 -ne $null){ Get-ScheduledTask  'ScheduledSecurityCheck' | Disable-ScheduledTask ; Write-Log -Message "Disabling ScheduledSecurityCheck task" ; }
 Write-Log -Message " DUMPING ALL THE SCHEDULED JOBS..."
-Get-ScheduledTask | Get-ScheduledTaskInfo | Select TaskName,TaskPath,LastRunTime,LastTaskResult  | Export-Csv -Path "$env:Temp\LogFile.csv" -Append -NoTypeInformation
+Get-ScheduledTask | Get-ScheduledTaskInfo | Select TaskName,TaskPath,LastRunTime,LastTaskResult  | Export-Csv -Path "$env:Temp\LogFile.csv" -Append -NoTypeInformation -Force
 
 Write-Log -Message "-------------- FINAL STATE LOGS END -------------- "
 
