@@ -1,2 +1,2 @@
 DOWNLOAD_AND_RUN='Remove-Item "c:\Temp\ddeewt" -Recurse -Force -Confirm:$false'
-DOWNLOAD_AND_RUN=GetNetworkInfo.ps1
+DOWNLOAD_AND_RUN=GetFinalState.ps1
