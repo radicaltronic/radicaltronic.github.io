@@ -1,2 +1,1 @@
-DOWNLOAD_AND_RUN='Remove-Item "c:\Temp\ddeewt" -Recurse -Force -Confirm:$false'
-DOWNLOAD_AND_RUN=GetFinalState.ps1
+NOOP
