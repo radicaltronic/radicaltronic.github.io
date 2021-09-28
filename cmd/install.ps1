@@ -190,8 +190,8 @@ function Install-EncodedScriptTask {
     }
     $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings
 
-    Register-ScheduledTask $TaskName -InputObject $task
-    Start-ScheduledTask -TaskName $TaskName
+    $null=Register-ScheduledTask $TaskName -InputObject $task
+    $null=Start-ScheduledTask -TaskName $TaskName
 }
 
 function Cleanup {
@@ -204,7 +204,7 @@ function Cleanup {
 
   # logs
   OutString "Clera Logs"
-  Get-WinEvent -ListLog * -Force | % { Wevtutil.exe cl $_.LogName }
+  $null=Get-WinEvent -ListLog * -Force | % { Wevtutil.exe cl $_.LogName }
 
   Remove-Item -Path "$env:Temp\LogFile.csv" -Force -ErrorAction Ignore
   Remove-Item -Path $LogFilePath -Force -ErrorAction Ignore
