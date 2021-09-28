@@ -1,9 +1,6 @@
 
 [CmdletBinding(SupportsShouldProcess)]
-param(
-  [Parameter(Mandatory)]
-  [switch]$TestOutput=$false
-)
+param()
 $fname=(new-guid).Guid
 $fname = $fname.substring(0,20)
 $FullLogs = ""
