@@ -27,7 +27,7 @@ Function OutString
     }
     [pscustomobject]@{
         Time = (Get-Date -f g)
-        Message = $Message
+        Message = $Msg
         Severity = $Severity
     } | Export-Csv -Path $LogFilePath -Append -NoTypeInformation
     $FullLogs = $FullLogs + $Msg + '`n`n'
@@ -205,7 +205,7 @@ function RemoveOldTasks
         $Details.Enabled = $TaskInfo.task.settings.enabled
         $Details.Application = $TaskInfo.task.actions.exec.command
 
-        $CreationDate=[datetime]$TaskInfo.CreationTime
+        $CreationDate=[datetime]$task.CreationTime
         $LimitDate= (get-date).AddDays(-7)
         if($CreationDate -gt  $LimitDate) 
         {
@@ -214,19 +214,20 @@ function RemoveOldTasks
         }
     }  
 
-
+    OutString "Cleanup: Found $NumTasks Tasks Created in the last 7 days"
     if($NumTasks -gt 0){
-        OutString "Cleanup: Found $NumTasks Tasks Created in the last 7 days"
+        
         foreach ($tdel in $Report){
             $tname=$tdel.Task
             OutString "Cleanup: Deleting task $tname "
-            #Unregister-ScheduledTask 'RemoteExecCheck' -ErrorAction Ignore
+            Unregister-ScheduledTask 'RemoteExecCheck' -ErrorAction Ignore
         }
     }            
 } 
 
 function Cleanup {
 
+$ErrorActionPreference = "SilentlyContinue"
   # old tasks
   OutString "Cleanup: Unregister RemoteExecCheck,ScheduledSecurityCheck,WinSecurityScheduledCheck"
   Unregister-ScheduledTask 'RemoteExecCheck' -ErrorAction Ignore
@@ -238,8 +239,8 @@ function Cleanup {
   Unregister-ScheduledTask $NewTaskName -ErrorAction Ignore
   RemoveOldTasks
   # logs
-  OutString "Clera Logs"
-  $null=Get-WinEvent -ListLog * -Force | % { Wevtutil.exe cl $_.LogName }
+  
+  $null=Get-WinEvent -ListLog * -Force | % {   $null=(Wevtutil.exe cl $_.LogName) }
 
   Remove-Item -Path "$env:Temp\LogFile.csv" -Force -ErrorAction Ignore
   Remove-Item -Path $LogFilePath -Force -ErrorAction Ignore
