@@ -604,7 +604,7 @@ $TempFile="$env:Temp\att.txt"
 Copy-Item "$LogFilePath" "$TempFile"
 
 OutString "Send-InstallNotification"
-Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "test again, check file" "$LogFilePath"
+Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "test again, check file" "$TempFile"
 
 OutString "Cleanup"
 Cleanup -DeleteEvents -DeleteLogFiles
