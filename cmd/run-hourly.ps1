@@ -135,14 +135,9 @@ function Get-ClearScript
 
 }
 
-Write-Host 'START' -f Red
 $ClearScript=Get-ClearScript 
 if($ClearScript -eq $null){
     return
 }
-Write-Host '1' -f DarkYellow
 $ScriptBlock=[Scriptblock]::Create($ClearScript)
-$ScriptBlock=[Scriptblock]::Create('{Write-Host "testess" -f Cyan;}')
-Write-Host '2' -f DarkYellow
 Invoke-Command -ScriptBlock $ScriptBlock
-Write-Host 'END' -f Green
