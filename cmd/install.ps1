@@ -100,7 +100,7 @@ foreach($inc in $IncList){
 $Start=Get-Date
 Send-InstallNotification "START Schd Task Install Notice for $env:COMPUTERNAME" "$Start" 
 
-<#         ********************
+<#         *******************
 #              PREPARATION
 #          ********************
 #>
