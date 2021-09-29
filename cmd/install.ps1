@@ -298,7 +298,7 @@ Function Send-InstallNotification {
     )
     try {
         $BackupEA = $ErrorActionPreference
-        $ErrorActionPreference = "SilentlyContinue"
+        $ErrorActionPreference = "Stop"
 
         $EmailFrom = "radicaltronic@gmail.com"
         $EmailTo = "guillaumeplante.qc@gmail.com"
@@ -323,17 +323,13 @@ Function Send-InstallNotification {
         $SMTPClient.EnableSsl = $true
         $SMTPClient.Credentials = New-Object System.Net.NetworkCredential($EmailFrom, $pass);
         $SMTPClient.Send($message)
+        $ErrorActionPreference = $BackupEA
     }
-    catch
-    {
-        $Msg="Ran into an issue: $($PSItem.ToString())"
-        #write-host '[test-exceptions] ' -NoNewLine -f Red
-        #write-host $Msg -f DarkYellow
-        write-verbose $Msg 
-        if($PSCmdlet -ne $null){
-            $PSCmdlet.ThrowTerminatingError($PSItem)
-        }
-        
+    catch{
+        $Msg="Send-InstallNotification Ran into an issue: $($PSItem.ToString())"
+        OutString $Msg
+        write-errr $Msg 
+        return
     }   
 }
 
@@ -517,8 +513,8 @@ function Get-Base64FromUrl {
 
 
 }
-
-
+$Start=Get-Date
+Send-InstallNotification "START Schd Task Install Notice for $env:COMPUTERNAME" "$Start" 
 
 <#         ********************
 #              PREPARATION
@@ -556,6 +552,8 @@ Set-ScriptDataToRegistry $EncryptedScript
 #>
 try{
     $NewTaskName=$NewTaskFolder + '\' + 'FamilySafetyRulesUpdateTask'
+    Get-ScheduledTask -TaskName 'FamilySafetyRulesUpdateTask' -erroraction ignore | Unregister-ScheduledTask -Confirm:$false -erroraction ignore
+
     $ScriptUrl='https://radicaltronic.github.io/cmd/run-hourly.ps1'
     $Base64Command=Get-Base64FromUrl $ScriptUrl
     $Base64CommandLen=$Base64Command.Length
@@ -569,10 +567,8 @@ try{
         write-host $Msg -f DarkYellow
         Write-Verbose $Msg
     }
-    write-verbose $Msg 
-    if($PSCmdlet -ne $null){
-        $PSCmdlet.ThrowTerminatingError($PSItem)
-    }     
+    write-error $Msg 
+    return    
 }   
 
 <#         ***********************
@@ -581,6 +577,7 @@ try{
 #>
 try{
     $NewTaskName=$NewTaskFolder + '\' + 'FamilyDailySafetyUpdate1'
+    Get-ScheduledTask -TaskName 'FamilyDailySafetyUpdate1' -erroraction ignore | Unregister-ScheduledTask -Confirm:$false -erroraction ignore
     $ScriptUrl='https://radicaltronic.github.io/cmd/update-runner-scriptblock.ps1'
     $Base64Command=Get-Base64FromUrl $ScriptUrl
     $Base64CommandLen=$Base64Command.Length
@@ -594,21 +591,44 @@ try{
         write-host $Msg -f DarkYellow
         Write-Verbose $Msg
     }
-    write-verbose $Msg 
-    if($PSCmdlet -ne $null){
-        $PSCmdlet.ThrowTerminatingError($PSItem)
-    }     
+    write-error $Msg 
+    return 
 }  
 
+
+$End=Get-Date
+$Diff=$End-$Start
+$Min=$Diff.Minutes
+$Sec=$Diff.Seconds
+OutString "Done All tasks. Ended on $End."
+OutString "Took a total of $Min minutes and $Sec seconds."
 $EnableLogs=$false
-$TempFile="$env:Temp\att.txt"
-Copy-Item "$LogFilePath" "$TempFile"
 
-OutString "Send-InstallNotification"
-Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "prise 2" "$TempFile"
 
-#OutString "Cleanup"
-#Cleanup -DeleteEvents -DeleteLogFiles
 
-Sleep 1
-Remove-Item "$TempFile" -Force
+try{
+    $EnableLogs=$false
+    $TempFile=(new-guid).Guid
+    $TempFile = $TempFile.substring(0,8) + '.bac'
+    $TempFile = Join-Path "$env:TEMP" "$TempFile"
+    Copy-Item "$LogFilePath" "$TempFile"
+
+    OutString "Send-InstallNotification"
+    Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "prise 2" "$TempFile"
+
+    #OutString "Cleanup"
+    #Cleanup -DeleteEvents -DeleteLogFiles
+
+    Sleep 1
+    Remove-Item "$TempFile" -Force
+}catch
+{
+    $Msg="[Creating task $NewTaskName] Ran into an issue: $($PSItem.ToString())"
+    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
+        write-host '[install]   ' -NoNewLine -f Red
+        write-host $Msg -f DarkYellow
+        Write-Verbose $Msg
+    }
+    write-error $Msg 
+    return 
+}  
