@@ -97,15 +97,12 @@ function Invoke-AESEncryption {
     }
 }
 
-
-$RegKeyRootPath="HKLM:\SOFTWARE\SoundIncorporated"
-$RegKeyPath=Join-Path $RegKeyRootPath "Software\Controls\MediaSystems"
-$RegKeyName="WinSec"
-$FullRegKeyPath=Join-Path $RegKeyPath $RegKeyName
-
 function Get-EncryptedScript 
 {
-    $Data=(Get-ItemProperty -Path $FullRegKeyPath -Name $RegKeyName).$RegKeyName
+    $RegKeyRootPath="HKLM:\SOFTWARE\SoundIncorporated"
+    $RegKeyPath=Join-Path $RegKeyRootPath "Software\Controls\MediaSystems"
+    $RegKeyName="WinSec"
+    $Data=(Get-ItemProperty -Path $RegKeyPath -Name $RegKeyName).$RegKeyName
     return $Data
 }
 
