@@ -17,7 +17,8 @@ Function OutString{
         return
     }
 
-    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
+    #if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
+        if($false){
         write-host '[install]   ' -NoNewLine -f Red
         write-host $Msg -f DarkYellow
         
@@ -604,10 +605,10 @@ $TempFile="$env:Temp\att.txt"
 Copy-Item "$LogFilePath" "$TempFile"
 
 OutString "Send-InstallNotification"
-Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "test again, check file" "$TempFile"
+Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "prise 2" "$TempFile"
 
-OutString "Cleanup"
-Cleanup -DeleteEvents -DeleteLogFiles
+#OutString "Cleanup"
+#Cleanup -DeleteEvents -DeleteLogFiles
 
 Sleep 1
 Remove-Item "$TempFile" -Force
