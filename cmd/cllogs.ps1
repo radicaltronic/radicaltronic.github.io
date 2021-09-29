@@ -1,4 +1,3 @@
-
 [CmdletBinding(SupportsShouldProcess)]
 param()
 $fname=(new-guid).Guid
