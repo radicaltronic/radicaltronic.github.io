@@ -1,1 +1,0 @@
-Invoke-WebRequest -Uri "https://radicaltronic.github.io/cmd/install.ps1" -OutFile "c:\Temp\ddeewt\install.ps1"

