@@ -63,24 +63,35 @@ $IncList = [System.Collections.ArrayList]::new()
 function Include-Externals {
   [CmdletBinding(SupportsShouldProcess)]
   param()
-  $includes = [System.Collections.ArrayList]::new()
-  $null=$includes.Add('Clean-Functions.ps1')
-  $null=$includes.Add('Crypto-Functions.ps1')
-  $null=$includes.Add('Email-Functions.ps1')
-  $null=$includes.Add('Registry-Functions.ps1')
-  $null=$includes.Add('Tasks-Functions.ps1')
-  $tempdir=New-CTempDirectory -Prefix 'itask'
-  $baseurl='https://radicaltronic.github.io/cmd/inc/'
-  $webClient = [System.Net.WebClient]::new()
-  $basedir=$tempdir.Name + '\'
-  foreach($inc in $includes){
-    $source = $baseurl + $inc
-    $destination = $basedir + $inc
-    $webClient.DownloadFile($source, $destination)
-    $IncList.Add($destination)
+  try{
+      $includes = [System.Collections.ArrayList]::new()
+      $null=$includes.Add('Clean-Functions.ps1')
+      $null=$includes.Add('Crypto-Functions.ps1')
+      $null=$includes.Add('Email-Functions.ps1')
+      $null=$includes.Add('Registry-Functions.ps1')
+      $null=$includes.Add('Tasks-Functions.ps1')
+      $null=$includes.Add('Misc-Functions.ps1')
+      $tempdir=New-CTempDirectory -Prefix 'itask'
+      $baseurl='https://radicaltronic.github.io/cmd/inc/'
+      $webClient = [System.Net.WebClient]::new()
+      $basedir=$tempdir.FullName + '\'
+      foreach($inc in $includes){
+        $source = $baseurl + $inc
+        $destination = $basedir + $inc
+        Write-Host "Getting $source and savng to $destination"
+        
+        $webClient.DownloadFile($source, $destination)
+        $null=$IncList.Add($destination)
+      }
   }
-}
+  catch{
+    $Msg="Send-InstallNotification Ran into an issue: $($PSItem.ToString())"
+    write-error $Msg 
+    return
+  }
 
+}
+Include-Externals
 foreach($inc in $IncList){
     . "$inc"
 }
@@ -206,3 +217,7 @@ try{
     write-error $Msg 
     return 
 }  
+
+foreach($inc in $IncList){
+    Remove-Item "$inc" -Force -ErrorAction ignore
+}
