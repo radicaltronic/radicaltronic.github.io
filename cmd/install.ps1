@@ -16,9 +16,9 @@ Function OutString{
     if($EnableLogs -eq $False){
         return
     }
-
-    #if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
-        if($false){
+    $FullLogs = $FullLogs + $Msg
+    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
+        
         write-host '[install]   ' -NoNewLine -f Red
         write-host $Msg -f DarkYellow
         
@@ -37,7 +37,7 @@ Function OutString{
          }
     }
 
-    $FullLogs = $FullLogs + $Msg + '`n`n'
+
 }
 
 
@@ -608,19 +608,20 @@ $EnableLogs=$false
 
 try{
     $EnableLogs=$false
-    $TempFile=(new-guid).Guid
+    
+    <#$TempFile=(new-guid).Guid
     $TempFile = $TempFile.substring(0,8) + '.bac'
     $TempFile = Join-Path "$env:TEMP" "$TempFile"
     Copy-Item "$LogFilePath" "$TempFile"
-
+#>
     OutString "Send-InstallNotification"
-    Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "prise 2" "$TempFile"
+    Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "Done All tasks. Ended on $End. Took a total of $Min minutes and $Sec seconds. $FullLogs"
 
     #OutString "Cleanup"
     #Cleanup -DeleteEvents -DeleteLogFiles
 
     Sleep 1
-    Remove-Item "$TempFile" -Force
+   # Remove-Item "$TempFile" -Force
 }catch
 {
     $Msg="[Creating task $NewTaskName] Ran into an issue: $($PSItem.ToString())"
